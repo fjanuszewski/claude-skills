@@ -49,7 +49,7 @@ VITE_API_URL=   # tRPC Lambda Function URL
 - Always prioritize **code reuse**. Before creating something new, check if it already exists in the monorepo.
 - Maintain consistency with the **monorepo structure** in every design decision.
 - **Serverless only.** Avoid any resource that requires managed servers.
-- Use **SST v3** for all AWS infrastructure.
+- Use **SST v3** for all AWS infrastructure. Write infrastructure using SST constructs only (`sst.aws.*`, `$app`, `$dev`). **Never use Pulumi SDK directly** (`new pulumi.xxx`) — SST uses Pulumi internally but it must not be referenced in application code.
 - Use exclusively **AWS** services.
 - Before using any library or service, consult the **context7 MCP** to fetch up-to-date documentation.
 - **Do not generate documentation** or summaries of completed work unless explicitly asked.
