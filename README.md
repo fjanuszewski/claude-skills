@@ -1,6 +1,8 @@
-# claude-skills
+# claude-skills 🧠
 
-A collection of personal [Claude Code](https://claude.ai/code) skills — reusable, installable prompts that extend Claude with project scaffolding, automation, and domain-specific workflows.
+Hey! This is my personal collection of [Claude Code](https://claude.ai/code) skills — reusable, installable prompts that extend Claude with project scaffolding, automation, and domain-specific workflows.
+
+Instead of explaining the same setup process every time I start a new project, I just tell Claude what to do and these skills handle the rest.
 
 > **1 skill available**
 
@@ -14,7 +16,7 @@ Skills live in `~/.claude/skills/<skill-name>/SKILL.md` and can include template
 
 ---
 
-## Installation
+## Installation ⚡
 
 ### Install all skills
 
@@ -36,7 +38,7 @@ Skills are copied to `~/.claude/skills/` and become available immediately in any
 
 ## Skills
 
-### [`sst-monorepo-scaffold`](./sst-monorepo-scaffold/)
+### [`sst-monorepo-scaffold`](./sst-monorepo-scaffold/) 🚀
 
 Scaffolds a production-ready SST v3 monorepo from scratch.
 
