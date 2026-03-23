@@ -45,6 +45,8 @@ VITE_API_URL=   # tRPC Lambda Function URL
 ## Rules
 
 - Conversations should always be in **English**, unless explicitly requested otherwise.
+- Always prioritize **code reuse**. Before creating something new, check if it already exists in the monorepo.
+- Maintain consistency with the **monorepo structure** in every design decision.
 - **Serverless only.** Avoid any resource that requires managed servers.
 - Use **SST v3** for all AWS infrastructure.
 - Use exclusively **AWS** services.
@@ -57,4 +59,4 @@ VITE_API_URL=   # tRPC Lambda Function URL
 - Components and TS/TSX files must not exceed **400 lines**. Split into smaller components if needed.
 - Use a **feature-based** folder structure: each feature has its own folder under `views/`, containing its components, hooks, and services. Reusable components go in `components/` and must be as generic as possible.
 - **Colors**: always use colors defined in the Tailwind theme (`text-primary`, `bg-brand`, etc). Never apply hex colors directly in JSX or `className`. If a new color is needed, add it first to `@theme` in `packages/web/src/index.css`. For opacities use Tailwind syntax (`bg-brand/20`). In config objects, use CSS variables (`var(--color-brand)`).
-- **Pricing/removal policy**: `retain` only in `production`, `remove` in all other stages.
+- **Removal policy**: `retain` only in `production`, `remove` in all other stages.
