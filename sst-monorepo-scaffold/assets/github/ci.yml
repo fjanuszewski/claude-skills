@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, staging]
+  workflow_dispatch:
+
+jobs:
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck web
+        run: npm run typecheck --workspace=packages/web
+
+      - name: Typecheck bff
+        run: npm run typecheck --workspace=packages/bff

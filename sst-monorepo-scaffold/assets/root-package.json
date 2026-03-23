@@ -1,0 +1,21 @@
+{
+  "name": "{{PROJECT_NAME}}",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "sst dev",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "deploy:staging": "sst deploy --stage staging",
+    "deploy:production": "sst deploy --stage production"
+  },
+  "devDependencies": {
+    "sst": "^3.0.0",
+    "typescript": "^5.8.0",
+    "aws-cdk-lib": "2.189.1",
+    "constructs": "10.4.2"
+  }
+}

@@ -1,0 +1,60 @@
+# {{PROJECT_NAME}} — CLAUDE.md
+
+## Project
+
+**{{PROJECT_NAME}}** is {{PROJECT_DESCRIPTION}}
+
+## Stack
+
+- **Monorepo** with `./packages/` structure (web, bff)
+- **Frontend**: React 19 (no Next.js) — `packages/web`
+- **BFF**: tRPC v11 on AWS Lambda (Node.js + TypeScript) — `packages/bff`
+- **Infrastructure**: AWS fully serverless, deployed with SST v3
+- **AWS Profile**: `{{AWS_PROFILE}}` — always use this profile for any AWS operation
+- **Stages**: `local` (sst dev) · `staging` · `production`
+
+## File structure
+
+```
+{{PROJECT_NAME}}/
+├── package.json           — workspaces: ["packages/*"]
+├── sst.config.ts          — SST v3 (profile: {{AWS_PROFILE}}, region: {{AWS_REGION}})
+├── CLAUDE.md
+├── infra/
+│   └── bff.ts             — Lambda tRPC + Function URL
+└── packages/
+    ├── bff/
+    │   └── src/
+    │       ├── index.ts       — Lambda handler
+    │       ├── app.router.ts  — tRPC root router
+    │       └── trpc.ts        — procedures (publicProcedure, ...)
+    └── web/
+        ├── vite.config.ts
+        └── src/
+            ├── main.tsx       — providers (tRPC, React Query)
+            ├── App.tsx        — createBrowserRouter + RouterProvider
+            └── index.css      — @import "tailwindcss" + @theme
+```
+
+## Environment variables
+
+```
+VITE_API_URL=   # tRPC Lambda Function URL
+```
+
+## Rules
+
+- Conversations should always be in **English**, unless explicitly requested otherwise.
+- **Serverless only.** Avoid any resource that requires managed servers.
+- Use **SST v3** for all AWS infrastructure.
+- Use exclusively **AWS** services.
+- Before using any library or service, consult the **context7 MCP** to fetch up-to-date documentation.
+- **Do not generate documentation** or summaries of completed work unless explicitly asked.
+- **Do not leave comments explaining what Claude did** in any file or code.
+- Minimize tokens: short and direct responses. No filler, no restating obvious context.
+- Code documentation: minimal. Only where the logic is not self-evident.
+- **No external state libraries** — no Zustand, no MobX, no Redux. Use React Context + useState.
+- Components and TS/TSX files must not exceed **400 lines**. Split into smaller components if needed.
+- Use a **feature-based** folder structure: each feature has its own folder under `views/`, containing its components, hooks, and services. Reusable components go in `components/` and must be as generic as possible.
+- **Colors**: always use colors defined in the Tailwind theme (`text-primary`, `bg-brand`, etc). Never apply hex colors directly in JSX or `className`. If a new color is needed, add it first to `@theme` in `packages/web/src/index.css`. For opacities use Tailwind syntax (`bg-brand/20`). In config objects, use CSS variables (`var(--color-brand)`).
+- **Pricing/removal policy**: `retain` only in `production`, `remove` in all other stages.
