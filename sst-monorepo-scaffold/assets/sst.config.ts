@@ -1,5 +1,3 @@
-/// <reference path="./.sst/platform/config.d.ts" />
-
 // Stages:
 //   local      → npx sst dev
 //   staging    → npx sst deploy --stage staging
