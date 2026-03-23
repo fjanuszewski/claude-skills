@@ -22,7 +22,7 @@ Scaffold a production-ready SST v3 monorepo with React + Vite + Tailwind v4 (web
 
 ### Paso 1: Recolectar configuración
 
-Use `AskUserQuestion` to gather (combine into 1–2 questions max):
+Use `AskUserQuestion` to gather (combine into 2–3 questions max):
 
 | Variable | Ejemplo | Default |
 |----------|---------|---------|
@@ -34,6 +34,12 @@ Use `AskUserQuestion` to gather (combine into 1–2 questions max):
 | `{{DOMAIN}}` | `miapp.com` | — |
 | `{{TARGET_DIR}}` | `/Users/user/projects/mi-app` | cwd |
 | `{{YEAR}}` | `2026` | current year |
+| `{{I18N_LANGUAGES}}` | `en, es, pt-BR` | — (optional) |
+| `{{DESIGN_PEN_PATH}}` | `./design.pen` | — (optional) |
+
+**i18n**: Ask the user if the project will handle multiple languages. If yes, ask which languages (e.g. `en, es`).
+
+**Pencil.dev**: Ask the user if the project uses a Pencil.dev design file (`design.pen`). If yes, ask for the path relative to the project root (e.g. `./design.pen`).
 
 ### Paso 2: Leer todos los templates
 
@@ -48,6 +54,7 @@ Read every file from `~/.claude/skills/sst-monorepo-scaffold/assets/`. The full 
 
 **Infra:**
 - `assets/infra/bff.ts` → `{{TARGET_DIR}}/infra/bff.ts`
+- `assets/infra/web.ts` → `{{TARGET_DIR}}/infra/web.ts`
 
 **Web package:**
 - `assets/packages/web/package.json` → `{{TARGET_DIR}}/packages/web/package.json`
@@ -81,6 +88,20 @@ Replace ALL occurrences of each placeholder in the file contents before writing:
 - `{{AWS_REGION}}` → AWS region
 - `{{DOMAIN}}` → production domain (e.g., `miapp.com`)
 - `{{YEAR}}` → current year
+
+**Conditional placeholders** — these lines exist in `CLAUDE.md.template` and must be handled as follows:
+
+- `{{I18N_RULE}}`:
+  - If the user enabled i18n → replace with:
+    `- When creating a component, load all user-facing text using i18n keys. Supported languages: {{I18N_LANGUAGES}}.`
+    (with `{{I18N_LANGUAGES}}` already substituted, e.g. `en, es, pt-BR`)
+  - If not → **remove the entire line** from the output.
+
+- `{{DESIGN_PEN_RULE}}`:
+  - If the user provided a design.pen path → replace with:
+    `- Whenever a component or layout in \`packages/web\` is modified, reflect or compare the change with the Pencil.dev design file at \`{{DESIGN_PEN_PATH}}\`. Keep it as the single source of design truth.`
+    (with `{{DESIGN_PEN_PATH}}` already substituted)
+  - If not → **remove the entire line** from the output.
 
 ### Paso 4: Escribir todos los archivos
 

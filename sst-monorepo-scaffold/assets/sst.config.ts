@@ -22,9 +22,11 @@ export default $config({
   },
   async run() {
     const { bff } = await import("./infra/bff");
+    const { web } = await import("./infra/web");
 
     return {
       apiUrl: bff.url,
+      webUrl: web.url,
     };
   },
 });

@@ -21,7 +21,8 @@
 ├── sst.config.ts          — SST v3 (profile: {{AWS_PROFILE}}, region: {{AWS_REGION}})
 ├── CLAUDE.md
 ├── infra/
-│   └── bff.ts             — Lambda tRPC + Function URL
+│   ├── bff.ts             — Lambda tRPC + Function URL
+│   └── web.ts             — StaticSite (S3 + CloudFront) + domain
 └── packages/
     ├── bff/
     │   └── src/
@@ -60,3 +61,5 @@ VITE_API_URL=   # tRPC Lambda Function URL
 - Use a **feature-based** folder structure: each feature has its own folder under `views/`, containing its components, hooks, and services. Reusable components go in `components/` and must be as generic as possible.
 - **Colors**: always use colors defined in the Tailwind theme (`text-primary`, `bg-brand`, etc). Never apply hex colors directly in JSX or `className`. If a new color is needed, add it first to `@theme` in `packages/web/src/index.css`. For opacities use Tailwind syntax (`bg-brand/20`). In config objects, use CSS variables (`var(--color-brand)`).
 - **Removal policy**: `retain` only in `production`, `remove` in all other stages.
+{{I18N_RULE}}
+{{DESIGN_PEN_RULE}}
