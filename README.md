@@ -4,7 +4,7 @@ Hey! This is my personal collection of [Claude Code](https://claude.ai/code) ski
 
 Instead of explaining the same setup process every time I start a new project, I just tell Claude what to do and these skills handle the rest.
 
-> **1 skill available**
+> **2 skills available**
 
 ---
 
@@ -52,6 +52,19 @@ Scaffolds a production-ready SST v3 monorepo from scratch.
 - GitHub Actions — CI, staging deploy, production deploy
 
 **Stack:** SST v3 · React 19 · tRPC v11 · Tailwind v4 · AWS Lambda · npm workspaces
+
+### [`dynamo-erd`](./dynamo-erd/) 📊
+
+Generates a Mermaid Entity-Relationship Diagram from DynamoDB table definitions and backend code. Works with any IaC framework (SST, CDK, CloudFormation, Terraform) or plain backend code.
+
+**Triggers:** *"generar ERD"*, *"crear diagrama de entidades DynamoDB"*, *"generate DynamoDB ERD"*, *"documentar modelo de datos"*
+
+**Generates:**
+- `DATABASE.md` — Mermaid erDiagram with all entities, attributes, and relationships
+- Tables & Entities reference section
+- Access Patterns documentation per table
+
+**Supports:** SST v3 · AWS CDK · CloudFormation · SAM · Terraform · Plain backend code
 
 ---
 
