@@ -4,7 +4,7 @@ Hey! This is my personal collection of [Claude Code](https://claude.ai/code) ski
 
 Instead of explaining the same setup process every time I start a new project, I just tell Claude what to do and these skills handle the rest.
 
-> **2 skills available**
+> **4 skills available**
 
 ---
 
@@ -65,6 +65,36 @@ Generates a Mermaid Entity-Relationship Diagram from DynamoDB table definitions 
 - Access Patterns documentation per table
 
 **Supports:** SST v3 · AWS CDK · CloudFormation · SAM · Terraform · Plain backend code
+
+### [`ship`](./ship/) 🚀
+
+Stage, commit, and push all changes in one command. Optionally creates PRs and verifies GitHub Actions.
+
+**Triggers:** *"ship"*, *"shipear"*, *"pushear"*, *"subir cambios"*, *"commit y push"*, *"commitear"*
+
+**Features:**
+- `git add .` + commit + push in one step
+- Auto-generates descriptive commit messages (no AI attribution)
+- Optional PR creation to `staging` and/or `main`/`master`
+- Optional GitHub Actions verification after push
+- Never adds `Co-Authored-By` or AI mentions
+
+### [`page-to-pencil`](./page-to-pencil/) 🎨
+
+Captures a live web page using Playwright and faithfully recreates it as a Pencil (.pen) design file with pixel-accurate layout, colors, typography, and icons.
+
+**Triggers:** *"convertir página a pencil"*, *"page to pencil"*, *"capturar página en pencil"*, *"recrear UI en pencil"*, *"screenshot to pencil"*
+
+**Features:**
+- Opens any URL with Playwright and captures full-page screenshots
+- Handles login/authentication flows (asks user to login manually or provide credentials)
+- Multi-breakpoint support: mobile (375x812), tablet (768x1024), desktop (1440x900), desktop-xl (1920x1080)
+- Extracts exact colors, fonts, icons, and spacing from computed styles
+- Cross-references with project's component library for icon names and design tokens
+- Ultra-strict visual validation — iterates until the .pen matches the original
+- Auto-persists to disk (Pencil MCP works in-memory by default)
+
+**Requires:** Pencil MCP server · Playwright MCP server
 
 ---
 
