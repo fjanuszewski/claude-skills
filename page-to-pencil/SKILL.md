@@ -1,7 +1,6 @@
 ---
 name: page-to-pencil
 description: Use when the user asks to "convertir página a pencil", "capturar página en pencil", "diseñar en pencil desde URL", "page to pencil", "screenshot to pencil", "copiar página a .pen", "recrear UI en pencil", "pasar página a pencil", "capturar UI", "clonar página en pencil", or any variation involving converting a live web page into a Pencil (.pen) design file.
-version: 0.1.0
 ---
 
 # Page to Pencil Skill
@@ -57,39 +56,90 @@ For each breakpoint in `{{BREAKPOINTS}}`:
 
 **IMPORTANT**: Take the screenshot and analyze it carefully. This is your primary visual reference.
 
-### Paso 4: Análisis exhaustivo de la página
+### Paso 4: Análisis exhaustivo de la página (via Browser Inspector)
 
-This is the MOST CRITICAL step. Be ULTRA rigorous. For each breakpoint screenshot:
+This is the MOST CRITICAL step. Be ULTRA rigorous. **ALL visual properties MUST be extracted from the browser's computed styles — NEVER guess or approximate.**
+
+For each breakpoint screenshot:
 
 **4a — Layout Analysis:**
 - Use `browser_snapshot` to get the accessibility tree / DOM structure
 - Identify the page layout: sidebar, header, main content, footer
-- Measure exact dimensions: sidebar width, header height, content padding
+- Use `browser_evaluate` to extract EXACT computed dimensions:
+  ```javascript
+  // Extract layout dimensions from key structural elements
+  const layout = {};
+  ['header','nav','aside','main','footer','[class*=sidebar]','[class*=content]'].forEach(sel => {
+    const el = document.querySelector(sel);
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      const style = getComputedStyle(el);
+      layout[sel] = {
+        width: rect.width, height: rect.height,
+        x: rect.x, y: rect.y,
+        display: style.display, flexDirection: style.flexDirection,
+        gap: style.gap, padding: style.padding,
+        position: style.position
+      };
+    }
+  });
+  return layout;
+  ```
 - Note the grid/flex structure of each section
 
-**4b — Color Extraction:**
-- Use `browser_evaluate` to extract computed styles from key elements:
+**4b — Color Extraction (MANDATORY — never guess colors):**
+- Use `browser_evaluate` to extract computed styles from ALL visible elements:
   ```javascript
-  // Extract background colors, text colors, border colors
-  const elements = document.querySelectorAll('*');
-  const colors = new Set();
-  elements.forEach(el => {
+  // Extract ALL unique colors from the page
+  const colorMap = new Map();
+  document.querySelectorAll('*').forEach(el => {
     const style = getComputedStyle(el);
-    colors.add(style.backgroundColor);
-    colors.add(style.color);
-    colors.add(style.borderColor);
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return; // skip invisible
+    ['backgroundColor','color','borderColor','borderTopColor','borderBottomColor',
+     'borderLeftColor','borderRightColor','outlineColor','boxShadow'].forEach(prop => {
+      const val = style[prop];
+      if (val && val !== 'rgba(0, 0, 0, 0)' && val !== 'none' && val !== 'transparent') {
+        if (!colorMap.has(val)) {
+          colorMap.set(val, { value: val, sample: el.tagName + '.' + el.className?.split(' ')[0], prop });
+        }
+      }
+    });
   });
-  return [...colors].filter(c => c !== 'rgba(0, 0, 0, 0)');
+  return [...colorMap.values()];
   ```
 - Build a color palette from the extracted colors
 - Convert all colors to hex format
-
-**4c — Typography Analysis:**
-- Use `browser_evaluate` to extract font information:
+- **Also extract CSS custom properties (variables):**
   ```javascript
-  const textElements = document.querySelectorAll('h1,h2,h3,h4,h5,h6,p,span,a,button,label,td,th,li');
+  // Extract CSS variables from :root and body
+  const rootStyles = getComputedStyle(document.documentElement);
+  const bodyStyles = getComputedStyle(document.body);
+  const cssVars = {};
+  for (const sheet of document.styleSheets) {
+    try {
+      for (const rule of sheet.cssRules) {
+        if (rule.selectorText === ':root' || rule.selectorText === 'body') {
+          for (let i = 0; i < rule.style.length; i++) {
+            const prop = rule.style[i];
+            if (prop.startsWith('--')) {
+              cssVars[prop] = rootStyles.getPropertyValue(prop).trim();
+            }
+          }
+        }
+      }
+    } catch(e) {} // skip cross-origin sheets
+  }
+  return cssVars;
+  ```
+
+**4c — Typography Analysis (MANDATORY — never guess fonts):**
+- Use `browser_evaluate` to extract the REAL rendered font information:
+  ```javascript
+  const textElements = document.querySelectorAll('h1,h2,h3,h4,h5,h6,p,span,a,button,label,td,th,li,div');
   const fonts = new Map();
   textElements.forEach(el => {
+    if (!el.textContent?.trim() || el.children.length > el.childNodes.length) return;
     const style = getComputedStyle(el);
     const key = `${style.fontFamily}|${style.fontSize}|${style.fontWeight}|${style.color}`;
     if (!fonts.has(key)) {
@@ -99,38 +149,137 @@ This is the MOST CRITICAL step. Be ULTRA rigorous. For each breakpoint screensho
         fontWeight: style.fontWeight,
         color: style.color,
         lineHeight: style.lineHeight,
-        sample: el.textContent?.substring(0, 50)
+        letterSpacing: style.letterSpacing,
+        textTransform: style.textTransform,
+        textDecoration: style.textDecoration,
+        sample: el.textContent?.trim().substring(0, 50),
+        tag: el.tagName
       });
     }
   });
   return [...fonts.values()];
   ```
+- **CRITICAL**: Use the FIRST font in the `fontFamily` list (the one actually rendered). If it's a web font (e.g., "Circular Std", "Inter", "DM Sans"), use that exact name. If it's not available in Pencil, find the closest match but document the original.
 
-**4d — Icon Discovery:**
-- Search the codebase for icon imports if the project is local:
-  - Grep for `lucide-react`, `react-icons`, `@heroicons`, `material-icons`, or SVG icon imports
-  - Read the component files that render the current page to find exact icon names
-- Use `browser_evaluate` to find SVG elements and icon classes:
-  ```javascript
-  const svgs = document.querySelectorAll('svg');
-  return [...svgs].map(svg => ({
-    parent: svg.parentElement?.className,
-    width: svg.getAttribute('width'),
-    height: svg.getAttribute('height'),
-    viewBox: svg.getAttribute('viewBox'),
-    nearestText: svg.closest('[class]')?.textContent?.substring(0, 30)
-  }));
+**4d — Icon Discovery (MANDATORY — never invent icon names):**
+
+Icons MUST be identified from the actual source code or DOM, NEVER guessed. Follow this strict order:
+
+**Step 1 — Source code inspection (preferred, most reliable):**
+- Search the codebase for icon imports in the component files that render the current page:
   ```
+  Grep for: lucide-react|react-icons|@heroicons|material-icons|@tabler/icons|phosphor-react
+  ```
+- Read the component files and extract the exact icon component names (e.g., `<Upload />`, `<PenLine />`, `<X />`)
+- Map component names to their icon library identifiers (e.g., `Upload` → lucide `upload`, `PenLine` → lucide `pen-line`)
+
+**Step 2 — DOM inspection (when source code is not available):**
+- Use `browser_evaluate` to inspect SVG elements and their context:
+  ```javascript
+  const icons = [];
+  document.querySelectorAll('svg').forEach((svg, i) => {
+    const parent = svg.parentElement;
+    const rect = svg.getBoundingClientRect();
+    if (rect.width === 0) return;
+    // Try to find icon name from data attributes, class names, or aria labels
+    const iconName = svg.getAttribute('data-icon') ||
+                     svg.getAttribute('aria-label') ||
+                     svg.closest('[data-icon]')?.getAttribute('data-icon') ||
+                     parent?.getAttribute('aria-label') ||
+                     svg.classList.toString() ||
+                     '';
+    // Extract SVG path data to fingerprint the icon
+    const paths = [...svg.querySelectorAll('path')].map(p => p.getAttribute('d')?.substring(0, 40));
+    icons.push({
+      index: i,
+      iconName,
+      width: rect.width,
+      height: rect.height,
+      color: getComputedStyle(svg).color || getComputedStyle(svg).fill,
+      stroke: getComputedStyle(svg).stroke,
+      pathCount: svg.querySelectorAll('path').length,
+      pathHints: paths.slice(0, 2),
+      nearestText: svg.closest('[class]')?.textContent?.trim().substring(0, 40),
+      parentClass: parent?.className
+    });
+  });
+  return icons;
+  ```
+
+**Step 3 — Cross-reference & validate:**
 - Cross-reference with the project's `ui-components` or shared library if available
+- If an icon library is identified (e.g., lucide), look up the extracted path data against known icon paths
+- **If you STILL cannot identify an icon after Steps 1-3, use a simple geometric placeholder (circle, square) and add a comment noting what the icon looks like — NEVER guess a random icon name**
 
-**4e — Component Structure:**
-- Identify all UI components: buttons, inputs, modals, cards, tables, dropdowns, tabs, badges
-- For each component, extract: dimensions, padding, border-radius, shadows, hover states
-- Note interactive elements: buttons with specific styles, active/inactive states, selected tabs
+**4e — Component Structure (extract from DOM, not guessed):**
+- For each visible component (buttons, inputs, modals, cards, tables, etc.), use `browser_evaluate`:
+  ```javascript
+  // Extract exact styles from interactive/structural elements
+  const components = [];
+  document.querySelectorAll('button, input, select, textarea, [role=dialog], [role=tablist], table, [class*=card], [class*=badge], [class*=modal]').forEach(el => {
+    const style = getComputedStyle(el);
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0) return;
+    components.push({
+      tag: el.tagName,
+      role: el.getAttribute('role'),
+      text: el.textContent?.trim().substring(0, 40),
+      width: rect.width, height: rect.height,
+      padding: style.padding,
+      borderRadius: style.borderRadius,
+      border: style.border,
+      backgroundColor: style.backgroundColor,
+      color: style.color,
+      boxShadow: style.boxShadow,
+      fontSize: style.fontSize,
+      fontWeight: style.fontWeight,
+      cursor: style.cursor,
+      opacity: style.opacity
+    });
+  });
+  return components;
+  ```
 
-**4f — Spacing & Alignment:**
-- Extract gap values, margins, padding for all containers
-- Note alignment patterns (center, start, end, space-between)
+**4f — Spacing & Alignment (extract from DOM):**
+- Use `browser_evaluate` on container elements:
+  ```javascript
+  const containers = [];
+  document.querySelectorAll('[class*=container], [class*=wrapper], [class*=row], [class*=col], [class*=flex], [class*=grid], main, section, aside, header, footer').forEach(el => {
+    const style = getComputedStyle(el);
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0) return;
+    containers.push({
+      class: el.className?.toString().substring(0, 60),
+      display: style.display,
+      flexDirection: style.flexDirection,
+      justifyContent: style.justifyContent,
+      alignItems: style.alignItems,
+      gap: style.gap,
+      padding: style.padding,
+      margin: style.margin,
+      width: rect.width, height: rect.height
+    });
+  });
+  return containers;
+  ```
+
+**4g — CSS Stylesheets Inspection (for hidden/dynamic styles):**
+- Use `browser_evaluate` to extract relevant CSS rules that might affect hover, active, focus states:
+  ```javascript
+  // Look for gradient definitions, animations, transitions
+  const gradients = [];
+  for (const sheet of document.styleSheets) {
+    try {
+      for (const rule of sheet.cssRules) {
+        const text = rule.cssText || '';
+        if (text.includes('gradient') || text.includes('transition') || text.includes('@keyframes')) {
+          gradients.push(text.substring(0, 200));
+        }
+      }
+    } catch(e) {}
+  }
+  return gradients.slice(0, 20);
+  ```
 
 ### Paso 5: Abrir o crear archivo .pen
 
@@ -170,10 +319,31 @@ For each section in the page:
 - If a tab is selected, apply the selected style (border-bottom, color change)
 - Match hover-like visual states that are visible in the screenshot
 
-**IMPORTANT — Batch operations:**
+**IMPORTANT — Batch operations & INCREMENTAL PERSISTENCE:**
 - Use `batch_design` with maximum 25 operations per call
 - Work in logical chunks: sidebar first, then header, then main content sections
 - After each batch, use `get_screenshot` to verify the result matches the original
+- **PERSIST TO DISK AFTER EVERY LOGICAL SECTION** (see Paso 6e below). This prevents data loss if the session is interrupted or if `open_document` is called accidentally.
+
+**6e — Incremental Save (CRITICAL — do this after EVERY section):**
+
+After completing each logical section (e.g., sidebar done, header done, first modal done, etc.):
+
+1. Use `batch_get` with the root canvas pattern and `readDepth: 15` to export the full JSON
+2. Use the `Write` tool to save the JSON to `{{PEN_FILE_PATH}}`
+3. Continue building the next section
+
+**Why this matters**: Pencil MCP works in-memory. If you call `open_document` again, it reloads from disk and ALL unsaved in-memory changes are LOST. By saving after each section, you guarantee that at most one section of work can be lost.
+
+**Save frequency guideline:**
+- After building each major frame (root frame + background) → SAVE
+- After building each section within a frame (sidebar, header, content) → SAVE
+- After building each modal or overlay → SAVE
+- Before any `get_screenshot` that requires `open_document` → SAVE
+- After any visual fix/correction iteration → SAVE
+- **Rule of thumb: if you've done more than 2 `batch_design` calls since last save → SAVE NOW**
+
+**WARNING**: NEVER call `open_document` after making batch_design changes without saving first. `open_document` reloads from disk and destroys all unsaved in-memory work.
 
 ### Paso 7: Validación visual rigurosa
 
@@ -201,13 +371,21 @@ After building the full design:
    - Re-verify with `get_screenshot`
    - Repeat until the design passes ALL criteria
 
-### Paso 8: Persistir a disco
+### Paso 8: Persistir a disco (final save)
 
 **CRITICAL**: Pencil MCP tools work in-memory. Changes do NOT auto-save to disk.
 
+If you followed Paso 6e correctly, the file should already be mostly up to date. Do one final save:
+
 1. Use `batch_get` with `readDepth: 15` and the root node pattern to export the full JSON tree
-2. Use the `Write` tool to save the JSON to `{{PEN_FILE_PATH}}`
-3. Confirm the file was written successfully
+2. Read the current file on disk first with the `Read` tool (this prevents "file modified since read" errors)
+3. Use the `Write` tool to save the JSON to `{{PEN_FILE_PATH}}`
+4. Confirm the file was written successfully
+
+**Troubleshooting persistence:**
+- If `Write` fails with "file has been modified since read", read the file again with `Read` and retry `Write`
+- If the .pen file on disk appears empty or corrupted, re-export with `batch_get` and overwrite
+- Always verify persistence by reading the file back and checking node count
 
 ### Paso 9: Multi-breakpoint (si aplica)
 
@@ -233,13 +411,34 @@ Abrí el archivo en Pencil para revisarlo.
 
 ## Reglas de exigencia (ULTRA strict)
 
-1. **NUNCA inventar colores** — siempre extraer del computed style o del screenshot
-2. **NUNCA usar fuentes genéricas** — extraer la font-family exacta de la página
-3. **NUNCA adivinar iconos** — buscar en el código fuente el nombre exacto del icono; si no se encuentra, usar `browser_evaluate` para inspeccionar el SVG
-4. **NUNCA aproximar dimensiones** — usar valores extraídos del DOM, no "a ojo"
-5. **Sidebar obligatorio** — si la página tiene sidebar, DEBE estar en el diseño
-6. **Verificación visual obligatoria** — SIEMPRE hacer `get_screenshot` después de construir y comparar con el original
-7. **Iterar hasta que sea perfecto** — no dar por terminado hasta que la verificación visual pase todos los criterios
-8. **Persistir siempre a disco** — nunca olvidar el Paso 8; el diseño debe quedar guardado en el archivo .pen
-9. **Si hay un proyecto local**, buscar en `ui-components` o librerías compartidas para obtener los componentes, colores y variables exactas del design system
-10. **Cada texto visible** en el screenshot DEBE tener su equivalente en el .pen — no omitir ningún texto, label, o badge
+### Extraction rules — NEVER guess, ALWAYS extract
+
+1. **NUNCA inventar colores** — SIEMPRE extraer del `getComputedStyle()` via `browser_evaluate`. Convertir rgb/rgba a hex. Si hay CSS variables, extraerlas también.
+2. **NUNCA usar fuentes genéricas** — SIEMPRE extraer `fontFamily` del computed style. Usar la PRIMERA fuente de la lista (la que realmente se renderiza). Si Pencil no la soporta, documentar la fuente real y usar la más cercana disponible.
+3. **NUNCA adivinar iconos** — Seguir el proceso estricto de 3 pasos del Paso 4d:
+   - Paso 1: Buscar en el código fuente los imports exactos del icon library
+   - Paso 2: Inspeccionar el DOM con `browser_evaluate` para obtener `data-icon`, `aria-label`, o path data del SVG
+   - Paso 3: Cross-reference con la librería del proyecto
+   - Si después de los 3 pasos no se identifica → usar placeholder geométrico, NUNCA un nombre inventado
+4. **NUNCA aproximar dimensiones** — SIEMPRE usar `getBoundingClientRect()` y `getComputedStyle()` via `browser_evaluate`. Padding, margin, gap, border-radius: todos extraídos del DOM.
+5. **NUNCA asumir estilos de botones/inputs/componentes** — SIEMPRE extraer background, color, border, border-radius, padding, font-size, font-weight del computed style de cada elemento.
+
+### Structural rules
+
+6. **Sidebar obligatorio** — si la página tiene sidebar, DEBE estar en el diseño
+7. **Verificación visual obligatoria** — SIEMPRE hacer `get_screenshot` después de construir y comparar con el original
+8. **Iterar hasta que sea perfecto** — no dar por terminado hasta que la verificación visual pase todos los criterios
+9. **Cada texto visible** en el screenshot DEBE tener su equivalente en el .pen — no omitir ningún texto, label, o badge
+
+### Persistence rules — SAVE EARLY, SAVE OFTEN
+
+10. **Persistir incrementalmente** — guardar a disco después de CADA sección lógica completada (ver Paso 6e). Nunca esperar al final para guardar.
+11. **NUNCA llamar `open_document` después de hacer `batch_design` sin guardar primero** — `open_document` recarga desde disco y destruye todo el trabajo en memoria no guardado.
+12. **Verificar persistencia** — después de cada save, confirmar que el archivo se escribió correctamente. Si falla, reintentar inmediatamente.
+13. **Regla de 2 batches** — si hiciste más de 2 llamadas a `batch_design` desde el último save, guardar AHORA antes de cualquier otra operación.
+
+### Project integration rules
+
+14. **Si hay un proyecto local**, buscar en `ui-components` o librerías compartidas para obtener los componentes, colores y variables exactas del design system
+15. **Inspeccionar CSS variables y themes** — buscar `:root` y `[data-theme]` para obtener el sistema de colores completo antes de empezar a diseñar
+16. **Buscar stylesheets con gradients, shadows y transitions** — extraer estas definiciones del CSS para replicarlas fielmente
