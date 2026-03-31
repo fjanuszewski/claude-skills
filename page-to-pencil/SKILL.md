@@ -7,26 +7,26 @@ description: Use when the user asks to "convertir página a pencil", "capturar p
 
 Capture a live web page using Playwright and faithfully recreate it as a Pencil (.pen) design file. The result is a pixel-accurate design that matches the original page's layout, colors, typography, icons, and component structure.
 
-## Requisitos
+## Requirements
 
 - **Pencil MCP server** must be available (provides `batch_design`, `batch_get`, `get_screenshot`, etc.)
 - **Playwright MCP server** must be available (provides `browser_navigate`, `browser_take_screenshot`, etc.)
 - A running local or remote web page URL
 
-## Flujo de ejecución
+## Execution Flow
 
-### Paso 1: Recolectar configuración
+### Step 1: Collect Configuration
 
 Use `AskUserQuestion` to gather (combine into 1–2 questions max):
 
-| Variable | Pregunta | Default |
+| Variable | Question | Default |
 |----------|---------|---------|
-| `{{PAGE_URL}}` | URL de la página a capturar | — (requerido) |
-| `{{PEN_FILE_PATH}}` | Path del archivo .pen de salida | `./design.pen` |
-| `{{BREAKPOINTS}}` | Breakpoints a capturar | `desktop` (1440x900) |
-| `{{NEEDS_LOGIN}}` | ¿La página requiere autenticación? | No |
+| `{{PAGE_URL}}` | URL of the page to capture | — (required) |
+| `{{PEN_FILE_PATH}}` | Output .pen file path | `./design.pen` |
+| `{{BREAKPOINTS}}` | Breakpoints to capture | `desktop` (1440x900) |
+| `{{NEEDS_LOGIN}}` | Does the page require authentication? | No |
 
-**Breakpoints disponibles** (ofrecer como multiSelect):
+**Available breakpoints** (offer as multiSelect):
 - `mobile` — 375x812 (iPhone 14)
 - `tablet` — 768x1024 (iPad)
 - `desktop` — 1440x900 (Standard)
@@ -34,18 +34,18 @@ Use `AskUserQuestion` to gather (combine into 1–2 questions max):
 
 If the user already provided some of these values in their message, skip asking for them.
 
-### Paso 2: Preparar Playwright
+### Step 2: Prepare Playwright
 
 Use the Playwright MCP tools:
 
 1. Navigate to `{{PAGE_URL}}` using `browser_navigate`
 2. If `{{NEEDS_LOGIN}}` is true:
    - Take a screenshot to show the login page to the user
-   - Ask the user: "Por favor logueate manualmente en el browser de Playwright y avisame cuando estés listo." OR ask for credentials
+   - Ask the user: "Please log in manually in the Playwright browser and let me know when you're ready." OR ask for credentials
    - Wait for the user to confirm they are logged in
    - Navigate again to `{{PAGE_URL}}` after login
 
-### Paso 3: Captura de pantallas por breakpoint
+### Step 3: Capture Screenshots per Breakpoint
 
 For each breakpoint in `{{BREAKPOINTS}}`:
 
@@ -56,7 +56,7 @@ For each breakpoint in `{{BREAKPOINTS}}`:
 
 **IMPORTANT**: Take the screenshot and analyze it carefully. This is your primary visual reference.
 
-### Paso 4: Análisis exhaustivo de la página (via Browser Inspector)
+### Step 4: Exhaustive Page Analysis (via Browser Inspector)
 
 This is the MOST CRITICAL step. Be ULTRA rigorous. **ALL visual properties MUST be extracted from the browser's computed styles — NEVER guess or approximate.**
 
@@ -281,14 +281,14 @@ Icons MUST be identified from the actual source code or DOM, NEVER guessed. Foll
   return gradients.slice(0, 20);
   ```
 
-### Paso 5: Abrir o crear archivo .pen
+### Step 5: Open or Create .pen File
 
 1. Use `get_editor_state` to check current Pencil state
 2. Use `open_document` with `{{PEN_FILE_PATH}}`:
    - If the file exists, open it
    - If it doesn't exist, pass `new` to create a blank .pen file, then the user must save it to the desired path
 
-### Paso 6: Construir el diseño en Pencil
+### Step 6: Build the Design in Pencil
 
 For each breakpoint, create a frame in the .pen file. Work section by section, from outside-in:
 
@@ -323,7 +323,7 @@ For each section in the page:
 - Use `batch_design` with maximum 25 operations per call
 - Work in logical chunks: sidebar first, then header, then main content sections
 - After each batch, use `get_screenshot` to verify the result matches the original
-- **PERSIST TO DISK AFTER EVERY LOGICAL SECTION** (see Paso 6e below). This prevents data loss if the session is interrupted or if `open_document` is called accidentally.
+- **PERSIST TO DISK AFTER EVERY LOGICAL SECTION** (see Step 6e below). This prevents data loss if the session is interrupted or if `open_document` is called accidentally.
 
 **6e — Incremental Save (CRITICAL — do this after EVERY section):**
 
@@ -345,7 +345,7 @@ After completing each logical section (e.g., sidebar done, header done, first mo
 
 **WARNING**: NEVER call `open_document` after making batch_design changes without saving first. `open_document` reloads from disk and destroys all unsaved in-memory work.
 
-### Paso 7: Validación visual rigurosa
+### Step 7: Rigorous Visual Validation
 
 After building the full design:
 
@@ -353,8 +353,8 @@ After building the full design:
 2. Compare side-by-side with the original Playwright screenshot
 3. Check these criteria with ZERO tolerance:
 
-| Criterio | Validación |
-|----------|-----------|
+| Criterion | Validation |
+|-----------|-----------|
 | **Layout** | Sidebar width, header height, content area proportions match |
 | **Colors** | Background, text, border, accent colors are identical (hex match) |
 | **Typography** | Font family, size, weight, line-height match for every text element |
@@ -371,11 +371,11 @@ After building the full design:
    - Re-verify with `get_screenshot`
    - Repeat until the design passes ALL criteria
 
-### Paso 8: Persistir a disco (final save)
+### Step 8: Persist to Disk (final save)
 
 **CRITICAL**: Pencil MCP tools work in-memory. Changes do NOT auto-save to disk.
 
-If you followed Paso 6e correctly, the file should already be mostly up to date. Do one final save:
+If you followed Step 6e correctly, the file should already be mostly up to date. Do one final save:
 
 1. Use `batch_get` with `readDepth: 15` and the root node pattern to export the full JSON tree
 2. Read the current file on disk first with the `Read` tool (this prevents "file modified since read" errors)
@@ -387,58 +387,58 @@ If you followed Paso 6e correctly, the file should already be mostly up to date.
 - If the .pen file on disk appears empty or corrupted, re-export with `batch_get` and overwrite
 - Always verify persistence by reading the file back and checking node count
 
-### Paso 9: Multi-breakpoint (si aplica)
+### Step 9: Multi-breakpoint (if applicable)
 
 If multiple breakpoints were requested:
-- Repeat Pasos 3–8 for each breakpoint
+- Repeat Steps 3–8 for each breakpoint
 - Each breakpoint gets its own root frame on the canvas
 - Use `find_empty_space_on_canvas` to position each frame without overlap
 - Name each frame with the breakpoint label: `"Page Name - Desktop"`, `"Page Name - Mobile"`, etc.
 
-### Paso 10: Reportar resultado
+### Step 10: Report Results
 
 Show a minimal summary:
 
 ```
-Done. Diseño guardado en {{PEN_FILE_PATH}}
+Done. Design saved to {{PEN_FILE_PATH}}
 
-Breakpoints capturados:
+Breakpoints captured:
   - desktop (1440x900) ✓
   - mobile (375x812) ✓  (if applicable)
 
-Abrí el archivo en Pencil para revisarlo.
+Open the file in Pencil to review it.
 ```
 
-## Reglas de exigencia (ULTRA strict)
+## Strictness Rules (ULTRA strict)
 
 ### Extraction rules — NEVER guess, ALWAYS extract
 
-1. **NUNCA inventar colores** — SIEMPRE extraer del `getComputedStyle()` via `browser_evaluate`. Convertir rgb/rgba a hex. Si hay CSS variables, extraerlas también.
-2. **NUNCA usar fuentes genéricas** — SIEMPRE extraer `fontFamily` del computed style. Usar la PRIMERA fuente de la lista (la que realmente se renderiza). Si Pencil no la soporta, documentar la fuente real y usar la más cercana disponible.
-3. **NUNCA adivinar iconos** — Seguir el proceso estricto de 3 pasos del Paso 4d:
-   - Paso 1: Buscar en el código fuente los imports exactos del icon library
-   - Paso 2: Inspeccionar el DOM con `browser_evaluate` para obtener `data-icon`, `aria-label`, o path data del SVG
-   - Paso 3: Cross-reference con la librería del proyecto
-   - Si después de los 3 pasos no se identifica → usar placeholder geométrico, NUNCA un nombre inventado
-4. **NUNCA aproximar dimensiones** — SIEMPRE usar `getBoundingClientRect()` y `getComputedStyle()` via `browser_evaluate`. Padding, margin, gap, border-radius: todos extraídos del DOM.
-5. **NUNCA asumir estilos de botones/inputs/componentes** — SIEMPRE extraer background, color, border, border-radius, padding, font-size, font-weight del computed style de cada elemento.
+1. **NEVER invent colors** — ALWAYS extract from `getComputedStyle()` via `browser_evaluate`. Convert rgb/rgba to hex. If there are CSS variables, extract those too.
+2. **NEVER use generic fonts** — ALWAYS extract `fontFamily` from computed style. Use the FIRST font in the list (the one actually rendered). If Pencil doesn't support it, document the real font and use the closest available match.
+3. **NEVER guess icons** — Follow the strict 3-step process from Step 4d:
+   - Step 1: Search source code for exact icon library imports
+   - Step 2: Inspect DOM with `browser_evaluate` for `data-icon`, `aria-label`, or SVG path data
+   - Step 3: Cross-reference with the project's library
+   - If after all 3 steps the icon is still unidentified → use a geometric placeholder, NEVER an invented name
+4. **NEVER approximate dimensions** — ALWAYS use `getBoundingClientRect()` and `getComputedStyle()` via `browser_evaluate`. Padding, margin, gap, border-radius: all extracted from the DOM.
+5. **NEVER assume button/input/component styles** — ALWAYS extract background, color, border, border-radius, padding, font-size, font-weight from each element's computed style.
 
 ### Structural rules
 
-6. **Sidebar obligatorio** — si la página tiene sidebar, DEBE estar en el diseño
-7. **Verificación visual obligatoria** — SIEMPRE hacer `get_screenshot` después de construir y comparar con el original
-8. **Iterar hasta que sea perfecto** — no dar por terminado hasta que la verificación visual pase todos los criterios
-9. **Cada texto visible** en el screenshot DEBE tener su equivalente en el .pen — no omitir ningún texto, label, o badge
+6. **Mandatory sidebar** — if the page has a sidebar, it MUST be in the design
+7. **Mandatory visual verification** — ALWAYS run `get_screenshot` after building and compare with the original
+8. **Iterate until perfect** — do not consider it done until visual validation passes all criteria
+9. **Every visible text** in the screenshot MUST have its equivalent in the .pen — do not omit any text, label, or badge
 
 ### Persistence rules — SAVE EARLY, SAVE OFTEN
 
-10. **Persistir incrementalmente** — guardar a disco después de CADA sección lógica completada (ver Paso 6e). Nunca esperar al final para guardar.
-11. **NUNCA llamar `open_document` después de hacer `batch_design` sin guardar primero** — `open_document` recarga desde disco y destruye todo el trabajo en memoria no guardado.
-12. **Verificar persistencia** — después de cada save, confirmar que el archivo se escribió correctamente. Si falla, reintentar inmediatamente.
-13. **Regla de 2 batches** — si hiciste más de 2 llamadas a `batch_design` desde el último save, guardar AHORA antes de cualquier otra operación.
+10. **Persist incrementally** — save to disk after EVERY completed logical section (see Step 6e). Never wait until the end to save.
+11. **NEVER call `open_document` after making `batch_design` changes without saving first** — `open_document` reloads from disk and destroys all unsaved in-memory work.
+12. **Verify persistence** — after each save, confirm the file was written correctly. If it fails, retry immediately.
+13. **Rule of 2 batches** — if you've made more than 2 `batch_design` calls since the last save, save NOW before any other operation.
 
 ### Project integration rules
 
-14. **Si hay un proyecto local**, buscar en `ui-components` o librerías compartidas para obtener los componentes, colores y variables exactas del design system
-15. **Inspeccionar CSS variables y themes** — buscar `:root` y `[data-theme]` para obtener el sistema de colores completo antes de empezar a diseñar
-16. **Buscar stylesheets con gradients, shadows y transitions** — extraer estas definiciones del CSS para replicarlas fielmente
+14. **If there's a local project**, search `ui-components` or shared libraries to get exact components, colors, and variables from the design system
+15. **Inspect CSS variables and themes** — search `:root` and `[data-theme]` to get the complete color system before starting to design
+16. **Search stylesheets for gradients, shadows, and transitions** — extract these definitions from CSS to replicate them faithfully

@@ -1,7 +1,7 @@
 ---
 name: dynamo-erd
 description: Use this skill when the user asks to "generar ERD", "crear diagrama de entidades DynamoDB", "mapear tablas DynamoDB", "documentar modelo de datos", "actualizar diagrama de base de datos", "generate DynamoDB ERD", "create entity relationship diagram", "diagramar base de datos", or any variation involving generating or updating an ERD diagram from DynamoDB table definitions.
-version: 0.1.0
+version: 0.2.0
 ---
 
 # DynamoDB ERD Generator Skill
@@ -12,22 +12,22 @@ Generate a Mermaid Entity-Relationship Diagram from DynamoDB table definitions a
 
 A Markdown file with a Mermaid `erDiagram` block that renders natively in GitHub and VSCode (with Mermaid extension).
 
-## Flujo de ejecución
+## Execution Flow
 
-### Paso 1: Recolectar configuración
+### Step 1: Collect Configuration
 
 Use `AskUserQuestion` to gather (combine into 1–2 questions max):
 
-| Variable | Pregunta | Default |
+| Variable | Question | Default |
 |----------|---------|---------|
-| `{{INFRA_SOURCE}}` | ¿Dónde están definidas las tablas DynamoDB? (path a archivo/carpeta, o "buscar automáticamente") | Buscar automáticamente |
-| `{{BACKEND_PATH}}` | ¿Dónde está el código backend que usa las tablas? (carpeta) | Buscar automáticamente |
-| `{{EXISTING_ERD}}` | ¿Existe un archivo ERD previo para extender? (path o "no") | No (crear nuevo) |
-| `{{OUTPUT_PATH}}` | ¿Dónde colocar el archivo de salida? | `./DATABASE.md` en la raíz del proyecto |
+| `{{INFRA_SOURCE}}` | Where are the DynamoDB tables defined? (path to file/folder, or "auto-discover") | Auto-discover |
+| `{{BACKEND_PATH}}` | Where is the backend code that uses the tables? (folder) | Auto-discover |
+| `{{EXISTING_ERD}}` | Is there an existing ERD file to extend? (path or "no") | No (create new) |
+| `{{OUTPUT_PATH}}` | Where to place the output file? | `./DATABASE.md` at project root |
 
-If the user says "use defaults" or "buscar automáticamente", proceed with auto-discovery (Paso 2).
+If the user says "use defaults" or "auto-discover", proceed with auto-discovery (Step 2).
 
-### Paso 2: Descubrir tablas DynamoDB
+### Step 2: Discover DynamoDB Tables
 
 If `{{INFRA_SOURCE}}` was not explicitly provided, search in order until tables are found:
 
@@ -76,7 +76,7 @@ For each table discovered, record:
 - **Sort key** (name + type, if any)
 - **GSIs** (index name, hash key, range key, projection)
 
-### Paso 3: Descubrir entidades por tabla
+### Step 3: Discover Entities per Table
 
 For each table found, search in `{{BACKEND_PATH}}` (or the entire codebase if not specified):
 
@@ -110,7 +110,7 @@ For each entity type, look for:
 - Which attributes are GSI keys (document the pattern in a comment)
 - Which attributes look like foreign keys (end in `Id` or `_id` and reference another entity's prefix)
 
-### Paso 4: Descubrir relaciones entre tablas
+### Step 4: Discover Relationships Between Tables
 
 **4a — Foreign key detection:**
 For each entity, check attributes ending in `Id` or `_id`:
@@ -135,7 +135,7 @@ If multiple entities share a table, check if:
 
 Use the code patterns to infer: if the FK is on the "many" side (e.g., each FEEDBACK stores `epicGlobalId`), it's many-to-one.
 
-### Paso 5: Generar el archivo Mermaid ERD
+### Step 5: Generate the Mermaid ERD File
 
 Generate a `.md` file at `{{OUTPUT_PATH}}` with this structure:
 
@@ -206,7 +206,7 @@ erDiagram
 
 **For single-table design entities:** Add a comment in the "Tables & Entities" section noting which entities share a table. In the Mermaid diagram, treat each entity type as a separate box regardless of whether they share a physical table.
 
-### Paso 6: Extender archivo existente (si aplica)
+### Step 6: Extend Existing File (if applicable)
 
 If `{{EXISTING_ERD}}` was provided and points to an existing file:
 
@@ -221,19 +221,19 @@ If `{{EXISTING_ERD}}` was provided and points to an existing file:
 6. Update "Tables & Entities" and "Access Patterns" sections similarly (add new, update existing)
 7. Write the merged content back to the same file path
 
-### Paso 7: Reportar resultado
+### Step 7: Report Results
 
 Show a summary:
 ```
-✅ ERD generado en {{OUTPUT_PATH}}
+✅ ERD generated at {{OUTPUT_PATH}}
 
-📊 Resumen:
-  - Tablas DynamoDB: N
-  - Entidades: N
-  - Relaciones: N
-  - Archivos analizados: N
+📊 Summary:
+  - DynamoDB tables: N
+  - Entities: N
+  - Relationships: N
+  - Files analyzed: N
 
-💡 Para ver el diagrama:
-  - GitHub: se renderiza automáticamente en el .md
-  - VSCode: instalar extensión "Markdown Preview Mermaid Support"
+💡 To view the diagram:
+  - GitHub: renders automatically in the .md file
+  - VSCode: install the "Markdown Preview Mermaid Support" extension
 ```

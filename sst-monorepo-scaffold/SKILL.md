@@ -1,14 +1,14 @@
 ---
 name: sst-monorepo-scaffold
 description: This skill should be used when the user asks to "crear un nuevo proyecto SST", "scaffold a new SST project", "crear un monorepo con SST", "nuevo proyecto con React y tRPC", "iniciar un proyecto serverless con SST", or any variation involving creating a new project with SST v3 + AWS + React + tRPC monorepo structure.
-version: 0.1.0
+version: 0.2.0
 ---
 
 # SST Monorepo Scaffold Skill
 
 Scaffold a production-ready SST v3 monorepo with React + Vite + Tailwind v4 (web) and tRPC Lambda (bff).
 
-## Stack generado
+## Generated Stack
 
 - **Monorepo**: npm workspaces (`packages/web`, `packages/bff`)
 - **Frontend**: React 19 + Vite + TypeScript + Tailwind CSS v4
@@ -18,21 +18,21 @@ Scaffold a production-ready SST v3 monorepo with React + Vite + Tailwind v4 (web
 - **CI/CD**: GitHub Actions (ci, staging, production)
 - **Stages**: `local` (sst dev) | `staging` | `production`
 
-## Flujo de ejecución
+## Execution Flow
 
-### Paso 1: Recolectar configuración
+### Step 1: Collect Configuration
 
 Use `AskUserQuestion` to gather (combine into 2–3 questions max):
 
-| Variable | Ejemplo | Default |
+| Variable | Example | Default |
 |----------|---------|---------|
-| `{{PROJECT_NAME}}` | `mi-app` | — |
+| `{{PROJECT_NAME}}` | `my-app` | — |
 | `{{PROJECT_DESCRIPTION}}` | `A platform for managing invoices and work hours.` | — |
-| `{{ORG_SCOPE}}` | `@miapp` | `@{{PROJECT_NAME}}` |
+| `{{ORG_SCOPE}}` | `@myapp` | `@{{PROJECT_NAME}}` |
 | `{{AWS_PROFILE}}` | `my-profile` | `default` |
 | `{{AWS_REGION}}` | `us-east-1` | `us-east-1` |
-| `{{DOMAIN}}` | `miapp.com` | — |
-| `{{TARGET_DIR}}` | `/Users/user/projects/mi-app` | cwd |
+| `{{DOMAIN}}` | `myapp.com` | — |
+| `{{TARGET_DIR}}` | `/Users/user/projects/my-app` | cwd |
 | `{{YEAR}}` | `2026` | current year |
 | `{{I18N_LANGUAGES}}` | `en, es, pt-BR` | — (optional) |
 | `{{DESIGN_PEN_PATH}}` | `./design.pen` | — (optional) |
@@ -41,11 +41,11 @@ Use `AskUserQuestion` to gather (combine into 2–3 questions max):
 
 **Pencil.dev**: Ask the user if the project uses a Pencil.dev design file (`design.pen`). If yes, ask for the path relative to the project root (e.g. `./design.pen`).
 
-### Paso 2: Leer todos los templates
+### Step 2: Read All Templates
 
 Read every file from `~/.claude/skills/sst-monorepo-scaffold/assets/`. The full list:
 
-**Raíz:**
+**Root:**
 - `assets/root-package.json` → `{{TARGET_DIR}}/package.json`
 - `assets/root-tsconfig.json` → `{{TARGET_DIR}}/tsconfig.json`
 - `assets/sst.config.ts` → `{{TARGET_DIR}}/sst.config.ts`
@@ -77,16 +77,16 @@ Read every file from `~/.claude/skills/sst-monorepo-scaffold/assets/`. The full 
 - `assets/github/release.yml` → `{{TARGET_DIR}}/.github/workflows/release.yml`
 - `assets/github/stg-release.yml` → `{{TARGET_DIR}}/.github/workflows/stg-release.yml`
 
-### Paso 3: Sustituir variables
+### Step 3: Substitute Variables
 
 Replace ALL occurrences of each placeholder in the file contents before writing:
 
-- `{{PROJECT_NAME}}` → slug del proyecto (e.g., `mi-app`)
+- `{{PROJECT_NAME}}` → project slug (e.g., `my-app`)
 - `{{PROJECT_DESCRIPTION}}` → one-sentence description of what the project does (from user input)
-- `{{ORG_SCOPE}}` → npm scope (e.g., `@miapp`)
+- `{{ORG_SCOPE}}` → npm scope (e.g., `@myapp`)
 - `{{AWS_PROFILE}}` → AWS CLI profile name
 - `{{AWS_REGION}}` → AWS region
-- `{{DOMAIN}}` → production domain (e.g., `miapp.com`)
+- `{{DOMAIN}}` → production domain (e.g., `myapp.com`)
 - `{{YEAR}}` → current year
 
 **Conditional placeholders** — these lines exist in `CLAUDE.md.template` and must be handled as follows:
@@ -103,39 +103,39 @@ Replace ALL occurrences of each placeholder in the file contents before writing:
     (with `{{DESIGN_PEN_PATH}}` already substituted)
   - If not → **remove the entire line** from the output.
 
-### Paso 4: Escribir todos los archivos
+### Step 4: Write All Files
 
 Write each file to `{{TARGET_DIR}}`. Create parent directories as needed (use Bash `mkdir -p` for each subdirectory before writing).
 
 Write ALL files — do not skip any.
 
-### Paso 5: Mostrar checklist post-scaffold
+### Step 5: Show Post-scaffold Checklist
 
 ```
-✅ Proyecto scaffoldeado en {{TARGET_DIR}}
+✅ Project scaffolded in {{TARGET_DIR}}
 
-Próximos pasos:
+Next steps:
   cd {{TARGET_DIR}}
   npm install
 
-Desarrollo local:
+Local development:
   npx sst dev          # stage: local
 
 Deploy:
   npx sst deploy --stage staging     # staging
   npx sst deploy --stage production  # production
 
-Secrets (si aplica):
+Secrets (if applicable):
   npx sst secret set MySecret value --stage staging
   npx sst secret set MySecret value --stage production
 ```
 
-## Convenciones del proyecto generado
+## Generated Project Conventions
 
 - Serverless only — no EC2, no managed servers
-- Sin librerías de estado externas (no Zustand, no MobX)
-- Tailwind v4: `@import "tailwindcss"` + `@theme` en `index.css`, sin `tailwind.config.js`
-- Colores desde `@theme` únicamente (no hex en JSX)
-- Componentes: máximo 400 líneas
+- No external state libraries (no Zustand, no MobX)
+- Tailwind v4: `@import "tailwindcss"` + `@theme` in `index.css`, no `tailwind.config.js`
+- Colors from `@theme` only (no hex in JSX)
+- Components: max 400 lines
 - React Router v7: `createBrowserRouter` + `RouterProvider`
-- tRPC importado en web vía `{{ORG_SCOPE}}/bff` workspace
+- tRPC imported in web via `{{ORG_SCOPE}}/bff` workspace
