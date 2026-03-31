@@ -1,7 +1,7 @@
 ---
 name: aws-ses-setup
 description: Use this skill when the user asks to "configurar SES", "setup SES", "habilitar SES", "enable SES", "configurar email con AWS", "setup email sending", "agregar dominio a SES", "verify domain SES", "sacar SES de sandbox", "SES production access", or any variation involving setting up AWS SES for sending emails from a domain.
-version: 0.1.0
+version: 0.2.0
 ---
 
 # AWS SES Setup Skill
@@ -14,28 +14,28 @@ Configure AWS SES end-to-end for a domain: verify domain, set up DKIM/SPF/DMARC,
 - The domain/subdomain must have a Route 53 hosted zone in the same AWS account (for automatic DNS record creation)
 - `aws sesv2` commands available (included in AWS CLI v2)
 
-## Flujo de ejecución
+## Execution Flow
 
-### Paso 1: Recolectar configuración
+### Step 1: Collect Configuration
 
 If the user provided all parameters in their invocation message, extract them directly. Otherwise, use `AskUserQuestion` to gather what's missing (combine into 1–2 questions max):
 
-| Variable | Pregunta | Default | Required |
+| Variable | Question | Default | Required |
 |----------|---------|---------|----------|
-| `{{DOMAIN}}` | ¿Qué dominio o subdominio querés configurar para enviar emails? | — | Yes |
-| `{{MAIL_TYPE}}` | ¿Qué tipo de emails vas a enviar? (TRANSACTIONAL / MARKETING / MIXED) | TRANSACTIONAL | Yes |
-| `{{AWS_PROFILE}}` | ¿Qué perfil de AWS CLI usar? | `default` | Yes |
-| `{{AWS_REGION}}` | ¿En qué región de AWS configurar SES? | `us-east-1` | No |
-| `{{CONTACT_EMAIL}}` | Email de contacto para la solicitud de producción y reportes DMARC | — | Yes |
-| `{{WEBSITE_URL}}` | URL del sitio web (para la solicitud de producción) | `https://{{DOMAIN}}` | No |
-| `{{USE_CASE}}` | Descripción breve del caso de uso (1-2 oraciones) | — | Yes |
-| `{{DAILY_VOLUME}}` | Volumen estimado de emails por día | `100` | No |
+| `{{DOMAIN}}` | What domain or subdomain do you want to configure for sending emails? | — | Yes |
+| `{{MAIL_TYPE}}` | What type of emails will you send? (TRANSACTIONAL / MARKETING / MIXED) | TRANSACTIONAL | Yes |
+| `{{AWS_PROFILE}}` | Which AWS CLI profile to use? | `default` | Yes |
+| `{{AWS_REGION}}` | Which AWS region to configure SES in? | `us-east-1` | No |
+| `{{CONTACT_EMAIL}}` | Contact email for the production request and DMARC reports | — | Yes |
+| `{{WEBSITE_URL}}` | Website URL (for the production request) | `https://{{DOMAIN}}` | No |
+| `{{USE_CASE}}` | Brief description of the use case (1-2 sentences) | — | Yes |
+| `{{DAILY_VOLUME}}` | Estimated email volume per day | `100` | No |
 
 **Examples of invocation with inline parameters:**
 - `/ses-setup tele-medicina.curf.com.ar transactional profile:docnear` → extracts domain, mail type, and profile
 - `/ses-setup example.com marketing emails for newsletter, ~500/day, contact: admin@example.com` → extracts all params from natural language
 
-### Paso 2: Verificar estado actual
+### Step 2: Check Current State
 
 Before executing anything, check what already exists. Run ALL these checks in parallel:
 
@@ -66,9 +66,9 @@ From these results, determine:
 
 **If no Route 53 hosted zone found:** Inform the user that DNS records must be created manually and provide the records they need to add. Then continue with SES configuration only.
 
-### Paso 3: Crear identidad del dominio en SES
+### Step 3: Create Domain Identity in SES
 
-**Check:** If `IDENTITY_EXISTS` is true and DKIM status is SUCCESS → skip this step and Paso 4.
+**Check:** If `IDENTITY_EXISTS` is true and DKIM status is SUCCESS → skip this step and Step 4.
 
 **If identity does not exist:**
 ```bash
@@ -86,7 +86,7 @@ aws sesv2 get-email-identity --email-identity {{DOMAIN}} \
   --query 'DkimAttributes.Tokens'
 ```
 
-### Paso 4: Crear registros DKIM en Route 53
+### Step 4: Create DKIM Records in Route 53
 
 **Check:** For each of the 3 DKIM tokens, check if `<token>._domainkey.{{DOMAIN}}` CNAME already exists in `EXISTING_DNS`. Only create missing ones.
 
@@ -112,7 +112,7 @@ aws route53 change-resource-record-sets \
 
 Combine all missing DKIM records into a single `change-resource-record-sets` call.
 
-### Paso 5: Configurar MAIL FROM personalizado
+### Step 5: Configure Custom MAIL FROM
 
 **Check:** If `IDENTITY_EXISTS` and `MailFromAttributes.MailFromDomain` is already `mail.{{DOMAIN}}` with status SUCCESS → skip.
 
@@ -156,7 +156,7 @@ aws route53 change-resource-record-sets \
   }'
 ```
 
-### Paso 6: Crear registro DMARC
+### Step 6: Create DMARC Record
 
 **Check:** If `_dmarc.{{DOMAIN}}` TXT record already exists in `EXISTING_DNS` → skip.
 
@@ -177,7 +177,7 @@ aws route53 change-resource-record-sets \
   }'
 ```
 
-### Paso 7: Esperar verificación DKIM
+### Step 7: Wait for DKIM Verification
 
 Poll every 30 seconds until DKIM status is SUCCESS (typically 1–5 minutes):
 
@@ -191,7 +191,7 @@ aws sesv2 get-email-identity --email-identity {{DOMAIN}} \
 - If `PENDING` after 5 minutes → inform user it may take longer and continue with remaining steps
 - If `FAILED` → stop and report the error
 
-### Paso 8: Solicitar salida del sandbox
+### Step 8: Request Production Access
 
 **Check:** If `SANDBOX_MODE` is false (ProductionAccessEnabled = true) → skip, inform user account is already in production.
 
@@ -208,7 +208,7 @@ aws sesv2 put-account-details \
 
 Inform user: AWS reviews this manually and takes **24–48 hours** to approve. While in sandbox, emails can only be sent to verified addresses.
 
-### Paso 9: Verificar emails de test (sandbox only)
+### Step 9: Verify Test Emails (Sandbox Only)
 
 **Only if in sandbox.** Ask the user which email addresses to verify for testing:
 
@@ -220,7 +220,7 @@ aws sesv2 create-email-identity \
 
 Inform user they'll receive a verification email they need to click.
 
-### Paso 10: Test de envío
+### Step 10: Send Test Email
 
 Send a test email to verify everything works:
 
@@ -234,7 +234,7 @@ aws sesv2 send-email \
 
 If in sandbox, the destination must be a verified email.
 
-### Paso 11: Reportar resultado
+### Step 11: Report Results
 
 Show a summary:
 
@@ -267,7 +267,7 @@ Show a summary:
   - To create SMTP credentials: aws sesv2 create-email-identity ...
 ```
 
-## What this skill does NOT configure (and why)
+## What This Skill Does NOT Configure (and Why)
 
 - **VDM (Virtual Deliverability Manager)**: Optional paid feature for advanced deliverability monitoring. Not needed for <10k emails/day.
 - **Dedicated IPs**: Only useful for very high volume (>100k/day). Shared IPs are fine for typical usage.
